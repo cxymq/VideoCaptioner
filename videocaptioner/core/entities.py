@@ -168,6 +168,21 @@ class SubtitleRenderModeEnum(Enum):
     ROUNDED_BG = "圆角背景"  # Pillow 圆角矩形背景
 
 
+class CookieBrowserEnum(Enum):
+    """视频下载时读取 Cookie 的浏览器"""
+
+    NONE = "不使用"
+    CHROME = "Chrome"
+    EDGE = "Edge"
+    FIREFOX = "Firefox"
+    SAFARI = "Safari"
+    BRAVE = "Brave"
+
+    def ytdlp_name(self) -> str:
+        """yt-dlp cookiesfrombrowser 使用的浏览器名，不使用时为空"""
+        return "" if self is CookieBrowserEnum.NONE else self.value.lower()
+
+
 class VideoQualityEnum(Enum):
     """视频合成质量"""
 

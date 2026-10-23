@@ -7,7 +7,9 @@ import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from videocaptioner.config import APPDATA_PATH
+from videocaptioner.core.utils.cookies import apply_cookie_options, is_cookie_error
 from videocaptioner.core.utils.logger import setup_logger
+from videocaptioner.ui.common.config import cfg
 
 logger = setup_logger("video_download_thread")
 
@@ -34,7 +36,12 @@ class VideoDownloadThread(QThread):
             self.finished.emit(video_file_path)
         except Exception as e:
             logger.exception("下载视频失败: %s", str(e))
-            self.error.emit(str(e))
+            message = str(e)
+            if is_cookie_error(message):
+                message += self.tr(
+                    "\n可在 设置 → 视频下载 中选择浏览器读取 Cookie（需先在该浏览器打开过对应网站）"
+                )
+            self.error.emit(message)
 
     def progress_hook(self, d):
         """下载进度回调函数"""
@@ -133,11 +140,12 @@ class VideoDownloadThread(QThread):
             "thumbnail_format": "jpg",  # 指定缩略图的格式
         }
 
-        # 检查 cookies 文件
-        cookiefile_path = APPDATA_PATH / "cookies.txt"
-        if cookiefile_path.exists():
-            logger.info(f"使用cookiefile: {cookiefile_path}")
-            initial_ydl_opts["cookiefile"] = str(cookiefile_path)
+        # Cookie：优先从设置中选择的浏览器读取，否则使用 AppData/cookies.txt
+        apply_cookie_options(
+            initial_ydl_opts,
+            browser=cfg.cookies_browser.value.ytdlp_name(),
+            cookie_file=APPDATA_PATH / "cookies.txt",
+        )
 
         with yt_dlp.YoutubeDL(initial_ydl_opts) as ydl:
             # 提取视频信息（不下载）

@@ -427,6 +427,15 @@ def _build_download_parser(subparsers) -> None:
     p.add_argument("url", help="Video URL")
     _add_common_options(p)
     p.add_argument("-o", "--output", metavar="DIR", help="Output directory (default: current directory)")
+    cookies = p.add_mutually_exclusive_group()
+    cookies.add_argument(
+        "--cookies-from-browser",
+        dest="cookies_browser",
+        metavar="BROWSER",
+        help="Read cookies from a browser (chrome, edge, firefox, safari, brave, ...). "
+             "Needed by sites like Douyin; the browser must have visited the site",
+    )
+    cookies.add_argument("--cookies", dest="cookies_file", metavar="FILE", help="Netscape-format cookies.txt file")
     p.set_defaults(func=_run_download)
 
 
@@ -587,6 +596,10 @@ def _build_cli_overrides(args: argparse.Namespace) -> dict:
     _set("synthesize.style", getattr(args, "style", None))
     _set("synthesize.style_override", getattr(args, "style_override", None))
     _set("synthesize.font_file", getattr(args, "font_file", None))
+
+    # Download
+    _set("download.cookies_browser", getattr(args, "cookies_browser", None))
+    _set("download.cookies_file", getattr(args, "cookies_file", None))
 
     # Dubbing
     _set("dubbing.preset", getattr(args, "dub_preset", None))

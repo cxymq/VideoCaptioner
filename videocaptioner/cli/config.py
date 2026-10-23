@@ -104,6 +104,10 @@ DEFAULTS: Dict[str, Any] = {
         "reflect": False,
         "deeplx_endpoint": "",
     },
+    "download": {
+        "cookies_browser": "",
+        "cookies_file": "",
+    },
     "synthesize": {
         "subtitle_mode": "soft",
         "quality": "medium",

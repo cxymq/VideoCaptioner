@@ -20,6 +20,7 @@ from qfluentwidgets import (
 
 from videocaptioner.config import SETTINGS_PATH, WORK_PATH
 from videocaptioner.core.entities import (
+    CookieBrowserEnum,
     FasterWhisperModelEnum,
     LLMServiceEnum,
     SubtitleLayoutEnum,
@@ -252,6 +253,15 @@ class Config(QConfig):
     use_subtitle_style = ConfigItem("Video", "UseSubtitleStyle", False, BoolValidator())
     delogo_enabled = ConfigItem("Video", "DelogoEnabled", False, BoolValidator())
     delogo_regions = ConfigItem("Video", "DelogoRegions", "")
+
+    # ------------------- 视频下载配置 -------------------
+    cookies_browser = OptionsConfigItem(
+        "Download",
+        "CookiesBrowser",
+        CookieBrowserEnum.NONE,
+        OptionsValidator(CookieBrowserEnum),
+        EnumSerializer(CookieBrowserEnum),
+    )
 
     # ------------------- 字幕样式配置 -------------------
     subtitle_style_name = ConfigItem("SubtitleStyle", "StyleName", "default")

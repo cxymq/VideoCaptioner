@@ -302,10 +302,11 @@ class TaskCreationInterface(QWidget):
     def _process_url(self, url):
         # 检测 cookies.txt 文件
         cookiefile_path = APPDATA_PATH / "cookies.txt"
-        if not cookiefile_path.exists():
+        use_browser = cfg.cookies_browser.value.ytdlp_name()
+        if not use_browser and not cookiefile_path.exists():
             InfoBar.warning(
                 self.tr("警告"),
-                self.tr("建议根据文档配置cookies.txt文件，以可以下载高清视频"),
+                self.tr("建议在 设置 → 视频下载 中选择浏览器读取 Cookie，部分网站（如抖音）不配置会下载失败"),
                 duration=INFOBAR_DURATION_WARNING,
                 parent=self,
             )

@@ -74,6 +74,8 @@ class SettingInterface(ScrollArea):
         self.subtitleGroup = SettingCardGroup(
             self.tr("字幕合成配置"), self.scrollWidget
         )
+        # 视频下载配置组
+        self.downloadGroup = SettingCardGroup(self.tr("视频下载"), self.scrollWidget)
         # 保存配置组
         self.saveGroup = SettingCardGroup(self.tr("保存配置"), self.scrollWidget)
         # 个性化组
@@ -155,6 +157,19 @@ class SettingInterface(ScrollArea):
             self.tr("硬字幕视频合成时的质量等级（质量越高文件越大，编码时间越长）"),
             texts=[quality.value for quality in cfg.video_quality.validator.options],  # type: ignore
             parent=self.subtitleGroup,
+        )
+
+        # 视频下载配置卡片
+        self.cookiesBrowserCard = ComboBoxSettingCard(
+            cfg.cookies_browser,
+            FIF.GLOBE,
+            self.tr("从浏览器读取 Cookie"),
+            self.tr(
+                "下载抖音、B站会员内容等需要 Cookie 的视频时，直接读取该浏览器的 Cookie，"
+                "无需手动导出 cookies.txt（需先在该浏览器打开过对应网站）"
+            ),
+            texts=[browser.value for browser in cfg.cookies_browser.validator.options],  # type: ignore
+            parent=self.downloadGroup,
         )
 
         # 保存配置卡片
@@ -245,6 +260,8 @@ class SettingInterface(ScrollArea):
         self.subtitleGroup.addSettingCard(self.needVideoCard)
         self.subtitleGroup.addSettingCard(self.softSubtitleCard)
         self.subtitleGroup.addSettingCard(self.videoQualityCard)
+
+        self.downloadGroup.addSettingCard(self.cookiesBrowserCard)
 
         self.saveGroup.addSettingCard(self.savePathCard)
         self.saveGroup.addSettingCard(self.cacheEnabledCard)
@@ -620,6 +637,7 @@ class SettingInterface(ScrollArea):
         self.expandLayout.addWidget(self.translate_serviceGroup)
         self.expandLayout.addWidget(self.translateGroup)
         self.expandLayout.addWidget(self.subtitleGroup)
+        self.expandLayout.addWidget(self.downloadGroup)
         self.expandLayout.addWidget(self.saveGroup)
         self.expandLayout.addWidget(self.personalGroup)
         self.expandLayout.addWidget(self.aboutGroup)

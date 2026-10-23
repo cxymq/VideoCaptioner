@@ -15,6 +15,7 @@ from videocaptioner.core.dubbing.presets import (
     normalize_dubbing_voice,
     validate_dubbing_voice,
 )
+from videocaptioner.core.utils.js_runtime import deno_install_command
 
 
 @dataclass
@@ -40,6 +41,7 @@ def _run_checks(config: dict, *, check_api: bool = False) -> list[Check]:
     checks.append(_check_command("ffmpeg", "Required for audio extraction, timing fit, muxing, and hard subtitles."))
     checks.append(_check_command("ffprobe", "Required for media duration checks."))
     checks.append(_check_ytdlp())
+    checks.append(_check_deno())
     checks.append(_check_config_file())
     checks.extend(_check_transcribe(config))
     checks.extend(_check_subtitle(config))
@@ -79,6 +81,19 @@ def _check_ytdlp() -> Check:
         return Check("yt-dlp", "ok", "embedded yt_dlp module" + (f" ({version})" if version else ""))
     except Exception:
         return Check("yt-dlp", "error", "yt-dlp not found. Required by videocaptioner download.", "Install yt-dlp and make sure it is on PATH")
+
+
+def _check_deno() -> Check:
+    path = shutil.which("deno")
+    if not path:
+        return Check(
+            "deno",
+            "warn",
+            "deno not found. Required by yt-dlp to download YouTube videos.",
+            f"Install it with: {deno_install_command()}",
+        )
+    version = _command_version("deno")
+    return Check("deno", "ok", f"{path}" + (f" ({version})" if version else ""))
 
 
 def _yt_dlp_version_is_old(version: str) -> bool:

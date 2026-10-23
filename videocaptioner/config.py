@@ -104,5 +104,13 @@ for _path in [FASTER_WHISPER_PATH, BIN_PATH, BUNDLED_BIN_PATH]:
     if _path.exists():
         os.environ["PATH"] = str(_path) + os.pathsep + os.environ["PATH"]
 
+# macOS apps launched from Finder don't inherit the shell PATH. Append the
+# Homebrew and deno default locations so user-installed tools (e.g. deno for
+# yt-dlp YouTube extraction) are found, without overriding bundled binaries.
+if sys.platform == "darwin":
+    for _path in [Path("/opt/homebrew/bin"), Path("/usr/local/bin"), Path.home() / ".deno" / "bin"]:
+        if _path.exists() and str(_path) not in os.environ["PATH"].split(os.pathsep):
+            os.environ["PATH"] += os.pathsep + str(_path)
+
 if (BIN_PATH / "vlc").exists():
     os.environ["PYTHON_VLC_MODULE_PATH"] = str(BIN_PATH / "vlc")

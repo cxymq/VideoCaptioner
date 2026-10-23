@@ -7,6 +7,7 @@ import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from videocaptioner.config import APPDATA_PATH
+from videocaptioner.core.utils.js_runtime import deno_install_command, needs_deno
 from videocaptioner.core.utils.logger import setup_logger
 
 logger = setup_logger("video_download_thread")
@@ -34,7 +35,13 @@ class VideoDownloadThread(QThread):
             self.finished.emit(video_file_path)
         except Exception as e:
             logger.exception("下载视频失败: %s", str(e))
-            self.error.emit(str(e))
+            message = str(e)
+            if needs_deno(self.url):
+                message += (
+                    "\n\n下载 YouTube 视频需要 deno，当前未检测到。"
+                    f"请在终端执行 {deno_install_command()} 安装后重启软件。"
+                )
+            self.error.emit(message)
 
     def progress_hook(self, d):
         """下载进度回调函数"""

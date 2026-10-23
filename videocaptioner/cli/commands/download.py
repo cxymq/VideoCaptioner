@@ -6,6 +6,7 @@ from typing import Any
 
 from videocaptioner.cli import exit_codes as EXIT
 from videocaptioner.cli import output
+from videocaptioner.core.utils.js_runtime import deno_install_command, needs_deno
 
 
 def run(args: Namespace, config: dict) -> int:
@@ -44,4 +45,6 @@ def run(args: Namespace, config: dict) -> int:
             progress.fail(str(e))
         else:
             output.error(str(e))
+        if needs_deno(url):
+            output.hint(f"YouTube downloads require deno, which was not found. Install it with: {deno_install_command()}")
         return EXIT.RUNTIME_ERROR

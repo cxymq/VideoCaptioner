@@ -179,6 +179,13 @@ def run(args: Namespace, config: dict) -> int:
     crf, preset = _QUALITY_MAP.get(quality, (28, "medium"))
     soft = subtitle_mode == "soft"
 
+    from videocaptioner.core.utils.delogo import parse_delogo_regions
+    try:
+        delogo_regions = parse_delogo_regions(get(config, "synthesize.delogo", ""))
+    except ValueError as e:
+        output.error(str(e))
+        return EXIT.USAGE_ERROR
+
     # Warn if user explicitly passed style options with soft mode
     style_arg = getattr(args, "style", None)
     override_arg = getattr(args, "style_override", None)
@@ -202,6 +209,8 @@ def run(args: Namespace, config: dict) -> int:
     if verbose:
         output.info(f"Mode: {'soft (embedded track)' if soft else 'hard (burned in)'}")
         output.info(f"Quality: {quality} (CRF={crf}, preset={preset})")
+        if delogo_regions:
+            output.info(f"Delogo regions: {delogo_regions}")
 
     progress = None if quiet else output.ProgressLine(f"Synthesizing video [{subtitle_mode}]").start()
 
@@ -224,6 +233,7 @@ def run(args: Namespace, config: dict) -> int:
                 preset=preset,
                 soft_subtitle=True,
                 progress_callback=progress_callback,
+                delogo_regions=delogo_regions,
             )
         else:
             # Hard subtitle: resolve style and render
@@ -251,6 +261,7 @@ def run(args: Namespace, config: dict) -> int:
                     crf=crf,
                     preset=preset,
                     progress_callback=progress_callback,
+                    delogo_regions=delogo_regions,
                 )
             else:
                 from videocaptioner.core.asr.asr_data import ASRData
@@ -270,6 +281,7 @@ def run(args: Namespace, config: dict) -> int:
                     crf=crf,
                     preset=preset,
                     progress_callback=progress_callback,
+                    delogo_regions=delogo_regions,
                 )
 
         if progress:

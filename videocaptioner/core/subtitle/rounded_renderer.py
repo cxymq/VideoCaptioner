@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 from PIL import Image, ImageDraw
 
 from videocaptioner.core.entities import SubtitleLayoutEnum
+from videocaptioner.core.utils.delogo import DelogoRegion, build_delogo_filter
 from videocaptioner.core.utils.logger import setup_logger
 
 from .font_utils import FontType, get_font
@@ -275,6 +276,7 @@ def render_rounded_video(
     preset: str = "medium",
     progress_callback: Optional[Callable] = None,
     reference_height: int = 720,
+    delogo_regions: Optional[List[DelogoRegion]] = None,
 ) -> None:
     """
     渲染圆角背景字幕到视频（分批overlay方案）
@@ -292,6 +294,7 @@ def render_rounded_video(
         preset: FFmpeg编码预设
         progress_callback: 进度回调 (progress: int, message: str)
         reference_height: 参考高度（固定720P）
+        delogo_regions: 去水印区域列表 (x, y, w, h)，在第一批 overlay 前处理
     """
     # 检查字幕数据
     if not asr_data or not asr_data.segments:
@@ -316,6 +319,7 @@ def render_rounded_video(
 
     # 获取视频信息
     width, height, video_duration = _get_video_info(video_path)
+    delogo_vf = build_delogo_filter(delogo_regions, width, height)
 
     # 构建并缩放样式
     style_config = rounded_style or {}
@@ -386,9 +390,15 @@ def render_rounded_video(
             input_args = ["-i", current_video]
             filter_parts = []
 
+            # 去水印只在第一批对原视频处理一次，后续批次的输入已是处理后的视频
+            base = "[0:v]"
+            if batch_idx == 0 and delogo_vf:
+                filter_parts.append(f"[0:v]{delogo_vf}[base]")
+                base = "[base]"
+
             for local_idx, (start, end, png_path) in enumerate(batch_frames):
                 input_args.extend(["-i", str(png_path)])
-                prev = f"[v{local_idx}]" if local_idx > 0 else "[0:v]"
+                prev = f"[v{local_idx}]" if local_idx > 0 else base
                 curr = f"[{local_idx + 1}:v]"
                 out = f"[v{local_idx + 1}]"
                 filter_parts.append(

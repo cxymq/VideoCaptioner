@@ -5,12 +5,13 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 from PIL import Image
 
 from videocaptioner.config import CACHE_PATH, FONTS_PATH, RESOURCE_PATH
 from videocaptioner.core.entities import SubtitleLayoutEnum
+from videocaptioner.core.utils.delogo import DelogoRegion, build_delogo_filter
 from videocaptioner.core.utils.logger import setup_logger
 
 from .ass_utils import auto_wrap_ass_file
@@ -233,8 +234,8 @@ def _get_video_resolution(video_path: str) -> Tuple[int, int]:
         ),
     )
 
-    # 从 ffmpeg 输出中解析分辨率
-    pattern = r"(\d{2,5})x(\d{2,5})"
+    # 从 ffmpeg 输出的视频流信息中解析分辨率（只看 Stream 行，避免误匹配文件路径中的 "数字x数字"）
+    pattern = r"Stream.*Video:.* (\d{2,5})x(\d{2,5})"
     match = re.search(pattern, result.stderr)
     if match:
         return int(match.group(1)), int(match.group(2))
@@ -251,6 +252,7 @@ def render_ass_video(
     preset: str = "medium",
     progress_callback: Optional[Callable] = None,
     reference_height: int = 720,
+    delogo_regions: Optional[List[DelogoRegion]] = None,
 ) -> None:
     """
     渲染 ASS 样式字幕到视频（硬字幕）
@@ -265,6 +267,7 @@ def render_ass_video(
         preset: FFmpeg 编码预设
         progress_callback: 进度回调 (progress: str, message: str) -> None
         reference_height: 参考高度（固定720P）
+        delogo_regions: 去水印区域列表 (x, y, w, h)，在烧录字幕前处理
     """
     # 检查字幕数据是否为空
     if not asr_data or not asr_data.segments:
@@ -310,6 +313,11 @@ def render_ass_video(
 
         # 统一使用 ass 滤镜
         vf = f"ass='{subtitle_path_escaped}':fontsdir='{fonts_dir_escaped}'"
+
+        # 去水印需在烧录字幕之前，避免字幕被一起模糊
+        delogo_vf = build_delogo_filter(delogo_regions, width, height)
+        if delogo_vf:
+            vf = f"{delogo_vf},{vf}"
 
         # 检查 CUDA 是否可用
         use_cuda = _check_cuda_available()

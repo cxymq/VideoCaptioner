@@ -250,6 +250,8 @@ class Config(QConfig):
         EnumSerializer(VideoQualityEnum),
     )
     use_subtitle_style = ConfigItem("Video", "UseSubtitleStyle", False, BoolValidator())
+    delogo_enabled = ConfigItem("Video", "DelogoEnabled", False, BoolValidator())
+    delogo_regions = ConfigItem("Video", "DelogoRegions", "")
 
     # ------------------- 字幕样式配置 -------------------
     subtitle_style_name = ConfigItem("SubtitleStyle", "StyleName", "default")

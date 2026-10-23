@@ -128,6 +128,9 @@ class VideoDownloadThread(QThread):
             "quiet": True,  # 禁用日志输出
             "no_warnings": True,  # 禁用警告信息
             "noprogress": True,
+            # API 调用默认不重试（CLI 默认 10 次），代理不稳定时一次 SSL 断连就会失败
+            "retries": 10,
+            "fragment_retries": 10,
             "writeautomaticsub": need_subtitle,  # 下载自动生成的字幕
             "writethumbnail": need_thumbnail,  # 下载缩略图
             "thumbnail_format": "jpg",  # 指定缩略图的格式
@@ -175,7 +178,16 @@ class VideoDownloadThread(QThread):
             ydl.params.update(ydl_opts)
 
             # 使用 process_info 进行下载
-            ydl.process_info(info_dict)
+            try:
+                ydl.process_info(info_dict)
+            except yt_dlp.utils.DownloadError as e:
+                # 字幕下载失败（如 429 限流）不应影响视频下载，跳过字幕重试
+                if "Unable to download video subtitles" not in str(e):
+                    raise
+                logger.warning("字幕下载失败，跳过字幕继续下载视频: %s", e)
+                ydl.params["writeautomaticsub"] = False
+                ydl.params["writesubtitles"] = False
+                ydl.process_info(info_dict)
 
             # 获取视频文件路径
             video_file_path = Path(ydl.prepare_filename(info_dict))

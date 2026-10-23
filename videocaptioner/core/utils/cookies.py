@@ -51,3 +51,12 @@ def is_cookie_error(message: str) -> bool:
     """判断下载错误是否与 Cookie / 登录有关"""
     text = message.lower()
     return any(k in text for k in COOKIE_ERROR_KEYWORDS)
+
+
+def is_douyin_cookie_error(message: str) -> bool:
+    """抖音的 "Fresh cookies" 报错：带上 Cookie 也会出现
+
+    yt-dlp 的抖音解析器缺少接口签名（a_bogus），即使 Cookie 有效也拿不到视频信息，
+    见 https://github.com/yt-dlp/yt-dlp/issues/9667
+    """
+    return "[douyin]" in message.lower() and "fresh cookies" in message.lower()

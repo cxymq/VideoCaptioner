@@ -7,7 +7,11 @@ import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from videocaptioner.config import APPDATA_PATH
-from videocaptioner.core.utils.cookies import apply_cookie_options, is_cookie_error
+from videocaptioner.core.utils.cookies import (
+    apply_cookie_options,
+    is_cookie_error,
+    is_douyin_cookie_error,
+)
 from videocaptioner.core.utils.logger import setup_logger
 from videocaptioner.ui.common.config import cfg
 
@@ -37,7 +41,12 @@ class VideoDownloadThread(QThread):
         except Exception as e:
             logger.exception("下载视频失败: %s", str(e))
             message = str(e)
-            if is_cookie_error(message):
+            using_browser = bool(cfg.cookies_browser.value.ytdlp_name())
+            if using_browser and is_douyin_cookie_error(message):
+                message += self.tr(
+                    "\n已从浏览器读取 Cookie，但 yt-dlp 目前无法解析抖音视频（上游已知问题），暂时无法下载抖音视频"
+                )
+            elif not using_browser and is_cookie_error(message):
                 message += self.tr(
                     "\n可在 设置 → 视频下载 中选择浏览器读取 Cookie（需先在该浏览器打开过对应网站）"
                 )

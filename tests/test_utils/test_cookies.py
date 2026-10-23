@@ -119,6 +119,16 @@ class TestCli:
         config = build_config({"download": {"cookies_file": str(tmp_path / "nope.txt")}})
         assert run(Namespace(url="u", output=str(tmp_path), quiet=True), config) == EXIT.FILE_NOT_FOUND
 
+    def test_douyin_with_browser_explains_upstream_limit(self, fake_ydl, tmp_path, capsys):
+        from videocaptioner.cli.commands.download import run
+
+        fake_ydl.error = DOUYIN_ERROR
+        config = build_config({"download": {"cookies_browser": "chrome"}})
+        assert run(Namespace(url="u", output=str(tmp_path), quiet=True), config) == EXIT.RUNTIME_ERROR
+        captured = capsys.readouterr()
+        out = captured.out + captured.err
+        assert "9667" in out and "--cookies-from-browser" not in out
+
     def test_cookie_error_shows_hint(self, fake_ydl, tmp_path, capsys):
         from videocaptioner.cli.commands.download import run
 
@@ -128,12 +138,18 @@ class TestCli:
         assert "--cookies-from-browser" in captured.out + captured.err
 
 
+_QT_APP = None
+
+
 class TestGuiDownloadThread:
     @pytest.fixture(autouse=True)
     def app(self):
-        from PyQt5.QtCore import QCoreApplication
+        # 全局保留 Qt 应用实例：被回收后，cfg 里的配置项 QObject 也会被一起销毁
+        global _QT_APP
+        from PyQt5.QtWidgets import QApplication
 
-        yield QCoreApplication.instance() or QCoreApplication(sys.argv)
+        _QT_APP = QApplication.instance() or QApplication(sys.argv)
+        yield _QT_APP
 
     @pytest.fixture
     def browser_setting(self):
@@ -155,4 +171,17 @@ class TestGuiDownloadThread:
 
         assert fake_ydl.opts["cookiesfrombrowser"][0] == "chrome"
         assert "cookiefile" not in fake_ydl.opts
-        assert errors and "设置" in errors[0]
+        # 已经选了浏览器，不应再提示去设置里选；抖音要说明是上游限制
+        assert errors and "设置 → 视频下载" not in errors[0]
+        assert "抖音" in errors[0]
+
+    def test_thread_suggests_setting_when_no_browser(self, fake_ydl, browser_setting, tmp_path):
+        from videocaptioner.ui.thread.video_download_thread import VideoDownloadThread
+
+        browser_setting.cookies_browser.value = CookieBrowserEnum.NONE
+        fake_ydl.error = DOUYIN_ERROR
+        thread = VideoDownloadThread("https://www.douyin.com/video/1", str(tmp_path))
+        errors = []
+        thread.error.connect(errors.append)
+        thread.run()
+        assert errors and "设置 → 视频下载" in errors[0]

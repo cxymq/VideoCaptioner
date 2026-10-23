@@ -7,7 +7,11 @@ from typing import Any
 from videocaptioner.cli import exit_codes as EXIT
 from videocaptioner.cli import output
 from videocaptioner.cli.config import get
-from videocaptioner.core.utils.cookies import apply_cookie_options, is_cookie_error
+from videocaptioner.core.utils.cookies import (
+    apply_cookie_options,
+    is_cookie_error,
+    is_douyin_cookie_error,
+)
 from videocaptioner.core.utils.js_runtime import deno_install_command, needs_deno
 
 
@@ -61,6 +65,9 @@ def run(args: Namespace, config: dict) -> int:
             output.error(str(e))
         if needs_deno(url):
             output.hint(f"YouTube downloads require deno, which was not found. Install it with: {deno_install_command()}")
-        if is_cookie_error(str(e)) and not cookies_browser:
+        if cookies_browser and is_douyin_cookie_error(str(e)):
+            output.hint("yt-dlp currently cannot extract Douyin videos even with valid cookies "
+                        "(https://github.com/yt-dlp/yt-dlp/issues/9667)")
+        elif is_cookie_error(str(e)) and not cookies_browser:
             output.hint("Try --cookies-from-browser chrome (or edge/firefox/safari)")
         return EXIT.RUNTIME_ERROR

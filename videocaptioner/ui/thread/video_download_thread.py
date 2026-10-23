@@ -7,7 +7,11 @@ import yt_dlp
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from videocaptioner.config import APPDATA_PATH
-from videocaptioner.core.utils.cookies import apply_cookie_options, is_cookie_error
+from videocaptioner.core.utils.cookies import (
+    apply_cookie_options,
+    is_cookie_error,
+    is_douyin_cookie_error,
+)
 from videocaptioner.core.utils.js_runtime import deno_install_command, needs_deno
 from videocaptioner.core.utils.logger import setup_logger
 from videocaptioner.ui.common.config import cfg
@@ -43,7 +47,12 @@ class VideoDownloadThread(QThread):
                     "\n\n下载 YouTube 视频需要 deno，当前未检测到。"
                     f"请在终端执行 {deno_install_command()} 安装后重启软件。"
                 )
-            if is_cookie_error(message):
+            using_browser = bool(cfg.cookies_browser.value.ytdlp_name())
+            if using_browser and is_douyin_cookie_error(message):
+                message += self.tr(
+                    "\n已从浏览器读取 Cookie，但 yt-dlp 目前无法解析抖音视频（上游已知问题），暂时无法下载抖音视频"
+                )
+            elif not using_browser and is_cookie_error(message):
                 message += self.tr(
                     "\n可在 设置 → 视频下载 中选择浏览器读取 Cookie（需先在该浏览器打开过对应网站）"
                 )

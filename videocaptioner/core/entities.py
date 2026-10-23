@@ -702,6 +702,8 @@ class SynthesisConfig:
     # 字幕样式配置
     ass_style: str = ""  # ASS 样式字符串
     rounded_style: Optional[dict] = None  # 圆角背景样式配置
+    # 去水印区域，格式 "x,y,w,h;x,y,w,h"，为空表示不去水印
+    delogo_regions: str = ""
 
     def print_config(self) -> str:
         """Print video synthesis configuration"""
@@ -714,6 +716,8 @@ class SynthesisConfig:
             lines.append(f"Video Quality: {self.video_quality.value}")
             lines.append(f"  CRF: {self.video_quality.get_crf()}")
             lines.append(f"  Preset: {self.video_quality.get_preset()}")
+            if self.delogo_regions:
+                lines.append(f"Delogo: {self.delogo_regions}")
         lines.append("=" * 44)
         return "\n".join(lines)
 

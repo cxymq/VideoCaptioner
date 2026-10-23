@@ -227,6 +227,7 @@ class TaskFactory:
             subtitle_layout=cfg.subtitle_layout.value,
             ass_style=TaskFactory.get_ass_style(cfg.subtitle_style_name.value) if use_style else "",
             rounded_style=TaskFactory.get_rounded_style() if use_style else None,
+            delogo_regions=cfg.delogo_regions.value if cfg.delogo_enabled.value else "",
         )
 
         task = SynthesisTask(

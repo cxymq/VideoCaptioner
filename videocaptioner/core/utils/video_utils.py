@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Literal, Optional
+from typing import TYPE_CHECKING, Callable, List, Literal, Optional
 
 from ..entities import (
     AudioStreamInfo,
@@ -16,6 +16,7 @@ from ..entities import (
 from ..subtitle.ass_renderer import render_ass_video
 from ..subtitle.ass_utils import auto_wrap_ass_file
 from ..subtitle.rounded_renderer import render_rounded_video
+from ..utils.delogo import DelogoRegion, build_delogo_filter
 from ..utils.logger import setup_logger
 
 if TYPE_CHECKING:
@@ -189,9 +190,18 @@ def add_subtitles(
     vcodec: str = "libx264",
     soft_subtitle: bool = False,
     progress_callback: Optional[Callable] = None,
+    delogo_regions: Optional[List[DelogoRegion]] = None,
 ) -> None:
     assert Path(input_file).is_file(), "输入文件不存在"
     assert Path(subtitle_file).is_file(), "字幕文件不存在"
+
+    delogo_vf = ""
+    if delogo_regions:
+        video_info = get_video_info(input_file)
+        if video_info and video_info.width and video_info.height:
+            delogo_vf = build_delogo_filter(delogo_regions, video_info.width, video_info.height)
+        else:
+            logger.warning("Cannot read video resolution, delogo skipped")
 
     # 使用临时文件上下文管理器处理字幕（自动清理）
     with temporary_subtitle_file(subtitle_file) as temp_subtitle_path:
@@ -207,15 +217,18 @@ def add_subtitles(
             logger.debug("WebM format, forcing hard subtitles")
 
         if soft_subtitle:
-            # 添加软字幕
+            # 添加软字幕；去水印需要重新编码画面，否则直接复制视频流
+            if delogo_vf:
+                video_args = ["-c:v", vcodec, "-crf", str(crf), "-preset", preset, "-vf", delogo_vf]
+            else:
+                video_args = ["-c:v", "copy"]
             cmd = [
                 "ffmpeg",
                 "-i",
                 input_file,
                 "-i",
                 processed_subtitle,
-                "-c:v",
-                "copy",
+                *video_args,
                 "-c:a",
                 "copy",
                 "-c:s",
@@ -259,6 +272,8 @@ def add_subtitles(
                 vf = f"ass='{subtitle_path_escaped}'"
             else:
                 vf = f"subtitles='{subtitle_path_escaped}'"
+            if delogo_vf:
+                vf = f"{delogo_vf},{vf}"
 
             if Path(output).suffix.lower() == ".webm":
                 vcodec = "libvpx-vp9"
@@ -536,6 +551,7 @@ def add_subtitles_with_style(
     crf: int = 23,
     preset: PresetType = "medium",
     progress_callback: Optional[Callable] = None,
+    delogo_regions: Optional[List[DelogoRegion]] = None,
 ) -> None:
     """
     根据渲染模式选择合成方式
@@ -551,6 +567,7 @@ def add_subtitles_with_style(
         crf: 视频质量
         preset: FFmpeg 编码预设
         progress_callback: 进度回调
+        delogo_regions: 去水印区域列表 (x, y, w, h)
     """
 
     if render_mode == SubtitleRenderModeEnum.ROUNDED_BG:
@@ -564,6 +581,7 @@ def add_subtitles_with_style(
             crf=crf,
             preset=preset,
             progress_callback=progress_callback,
+            delogo_regions=delogo_regions,
         )
     else:
         # ASS 样式模式
@@ -576,4 +594,5 @@ def add_subtitles_with_style(
             crf=crf,
             preset=preset,
             progress_callback=progress_callback,
+            delogo_regions=delogo_regions,
         )

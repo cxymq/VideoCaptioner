@@ -110,6 +110,7 @@ DEFAULTS: Dict[str, Any] = {
         "layout": "target-above",
         "render_mode": "ass",
         "style": "default",
+        "delogo": "",
     },
     "dubbing": {
         "provider": "edge",

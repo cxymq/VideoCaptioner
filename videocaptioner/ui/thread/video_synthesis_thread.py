@@ -6,6 +6,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from videocaptioner.core.asr.asr_data import ASRData
 from videocaptioner.core.entities import SynthesisTask
+from videocaptioner.core.utils.delogo import parse_delogo_regions
 from videocaptioner.core.utils.logger import setup_logger
 from videocaptioner.core.utils.video_utils import add_subtitles, add_subtitles_with_style
 
@@ -55,6 +56,11 @@ class VideoSynthesisThread(QThread):
             # 读取字幕数据
             asr_data = ASRData.from_subtitle_file(subtitle_file)
 
+            try:
+                delogo_regions = parse_delogo_regions(config.delogo_regions)
+            except ValueError as e:
+                raise ValueError(self.tr("去水印区域格式错误: ") + str(e))
+
             if config.soft_subtitle:
                 # 软字幕：转为 SRT 后内嵌
                 with tempfile.NamedTemporaryFile(
@@ -77,6 +83,7 @@ class VideoSynthesisThread(QThread):
                         preset=preset,
                         soft_subtitle=True,
                         progress_callback=self.progress_callback,
+                        delogo_regions=delogo_regions,
                     )
                 finally:
                     Path(temp_srt_path).unlink(missing_ok=True)
@@ -94,6 +101,7 @@ class VideoSynthesisThread(QThread):
                     crf=crf,
                     preset=preset,
                     progress_callback=self.progress_callback,
+                    delogo_regions=delogo_regions,
                 )
 
             self.progress.emit(100, self.tr("合成完成"))

@@ -40,6 +40,7 @@ from videocaptioner.core.entities import (
 from videocaptioner.core.utils.platform_utils import open_folder
 from videocaptioner.ui.common.config import cfg
 from videocaptioner.ui.common.signal_bus import signalBus
+from videocaptioner.ui.components.DelogoSettingDialog import DelogoSettingDialog
 from videocaptioner.ui.task_factory import TaskFactory
 from videocaptioner.ui.thread.video_synthesis_thread import VideoSynthesisThread
 
@@ -191,6 +192,18 @@ class VideoSynthesisInterface(QWidget):
         self.video_quality_button.setMenu(self.video_quality_menu)
         self.command_bar.addWidget(self.video_quality_button)
 
+        self.command_bar.addSeparator()
+
+        # 添加去水印选项（点击打开设置对话框，勾选状态表示是否启用）
+        self.delogo_action = Action(
+            FIF.ERASE_TOOL,
+            self.tr("去水印"),
+            triggered=self.on_delogo_action_triggered,
+            checkable=True,
+        )
+        self.delogo_action.setToolTip(self.tr("合成时模糊指定区域的水印"))
+        self.command_bar.addAction(self.delogo_action)
+
         # 添加分隔符
         self.command_bar.addSeparator()
 
@@ -276,6 +289,7 @@ class VideoSynthesisInterface(QWidget):
         self.soft_subtitle_action.setChecked(cfg.soft_subtitle.value)
         self.need_video_action.setChecked(cfg.need_video.value)
         self.video_quality_button.setText(cfg.video_quality.value.value)
+        self.delogo_action.setChecked(cfg.delogo_enabled.value)
 
         # 设置样式相关初始值
         self.use_style_action.setChecked(cfg.use_subtitle_style.value)
@@ -356,6 +370,21 @@ class VideoSynthesisInterface(QWidget):
         cfg.set(cfg.video_quality, quality_enum)
         self.video_quality_button.setText(quality_text)
 
+    def on_delogo_action_triggered(self, _checked: bool):
+        """打开去水印设置，勾选状态以保存后的配置为准"""
+        dialog = DelogoSettingDialog(self.video_input.text().strip(), self.window())
+        saved = dialog.exec_()
+        enabled = cfg.delogo_enabled.value
+        self.delogo_action.setChecked(enabled)
+        if saved and enabled:
+            InfoBar.info(
+                self.tr("已开启去水印"),
+                self.tr("区域：") + cfg.delogo_regions.value,
+                duration=3000,
+                position=InfoBarPosition.BOTTOM,
+                parent=self,
+            )
+
     def on_video_quality_changed(self, quality_text: str):
         """处理外部质量配置变更（仅更新UI状态）"""
         self.video_quality_button.setText(quality_text)
@@ -415,6 +444,7 @@ class VideoSynthesisInterface(QWidget):
         self.soft_subtitle_action.setEnabled(need_video)
         self.use_style_action.setEnabled(need_video)
         self.video_quality_button.setEnabled(need_video)
+        self.delogo_action.setEnabled(need_video)
 
         # 渲染模式按钮需要同时满足：合成视频开启 且 使用样式开启
         self._update_style_controls_state()

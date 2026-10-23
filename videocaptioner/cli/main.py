@@ -248,6 +248,14 @@ def _build_synthesize_parser(subparsers) -> None:
         choices=["target-above", "source-above", "target-only", "source-only"],
         help="Subtitle layout for bilingual output (default: target-above)",
     )
+    opt.add_argument(
+        "--delogo",
+        action="append",
+        metavar="X,Y,W,H",
+        help="Blur a watermark region before burning subtitles, in source video pixels. "
+             "Repeat for multiple regions, e.g. --delogo 1560,25,345,80. "
+             "Forces video re-encoding (also in soft mode)",
+    )
 
     _add_style_options(p)
     p.add_argument("-o", "--output", metavar="PATH", help="Output video file path")
@@ -367,6 +375,8 @@ def _build_process_parser(subparsers) -> None:
     pipe.add_argument("--subtitle-mode", choices=["soft", "hard"], help="Subtitle mode (default: soft)")
     pipe.add_argument("--layout", choices=["target-above", "source-above", "target-only", "source-only"],
                       help="Subtitle layout (default: target-above)")
+    pipe.add_argument("--delogo", action="append", metavar="X,Y,W,H",
+                      help="Blur a watermark region during synthesis (repeatable, source video pixels)")
     pipe.add_argument("--preset", dest="dub_preset", choices=available_dubbing_presets(), help="Dubbing voice preset")
     p.add_argument("--dub-preset", dest="dub_preset", choices=available_dubbing_presets(), help=argparse.SUPPRESS)
     pipe.add_argument("--tts-api-key", metavar="KEY", help="Dubbing TTS API key for SiliconFlow/Gemini")
@@ -587,6 +597,8 @@ def _build_cli_overrides(args: argparse.Namespace) -> dict:
     _set("synthesize.style", getattr(args, "style", None))
     _set("synthesize.style_override", getattr(args, "style_override", None))
     _set("synthesize.font_file", getattr(args, "font_file", None))
+    delogo = getattr(args, "delogo", None)
+    _set("synthesize.delogo", ";".join(delogo) if delogo else None)
 
     # Dubbing
     _set("dubbing.preset", getattr(args, "dub_preset", None))
